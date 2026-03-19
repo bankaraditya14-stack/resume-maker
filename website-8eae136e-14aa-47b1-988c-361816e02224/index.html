@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart ATS Resume Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#7C3AED',
+                        accent: '#06B6D4',
+                        dark: '#0F172A',
+                        surface: '#1E293B',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        resume: ['Calibri', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0F172A; color: #E2E8F0; overflow-x: hidden; }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #818CF8, #06B6D4, #A78BFA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED, #06B6D4);
+        }
+        
+        .glass {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glow {
+            box-shadow: 0 0 40px rgba(79, 70, 229, 0.3), 0 0 80px rgba(124, 58, 237, 0.1);
+        }
+        
+        .btn-glow:hover {
+            box-shadow: 0 0 30px rgba(79, 70, 229, 0.5), 0 0 60px rgba(124, 58, 237, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        
+        .slide-up {
+            animation: slideUp 0.6s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        
+        .step-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .step-card.selected {
+            border-color: #4F46E5;
+            background: rgba(79, 70, 229, 0.15);
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.2);
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        input, textarea, select {
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+        }
+        
+        .resume-preview {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            color: #1a1a1a;
+            background: #ffffff;
+            line-height: 1.4;
+        }
+        
+        .resume-preview h1 { font-size: 22px; font-weight: 700; margin-bottom: 2px; color: #1a1a1a; }
+        .resume-preview h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #1a1a1a; padding-bottom: 3px; margin: 14px 0 8px 0; color: #1a1a1a; }
+        .resume-preview p { font-size: 11px; margin-bottom: 2px; color: #333; }
+        .resume-preview ul { padding-left: 16px; margin: 4px 0; }
+        .resume-preview li { font-size: 11px; margin-bottom: 2px; color: #333; }
+        
+        .ats-meter {
+            background: conic-gradient(from 180deg, #ef4444, #f59e0b, #22c55e, #22c55e, transparent);
+            border-radius: 50%;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(79, 70, 229, 0.4);
+            border-radius: 50%;
+            animation: particleFloat 8s ease-in-out infinite;
+        }
+        
+        @keyframes particleFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+            25% { transform: translate(100px, -50px) scale(1.5); opacity: 0.8; }
+            50% { transform: translate(-50px, -100px) scale(0.8); opacity: 0.3; }
+            75% { transform: translate(80px, 50px) scale(1.2); opacity: 0.6; }
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1E293B; }
+        ::-webkit-scrollbar-thumb { background: #4F46E5; border-radius: 3px; }
+        
+        .keyword-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .keyword-tag:hover { transform: scale(1.05); }
+        
+        .section-hidden { display: none; }
+        .section-visible { display: block; }
+        
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+        }
+
+        .pulse-ring {
+            animation: pulseRing 2s ease-out infinite;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Particles Background -->
+<div id="particles" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
+
+<!-- Navigation -->
+<nav class="fixed top-0 w-full z-50 glass border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="showSection('landing')">
+                <div class="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center text-white font-bold text-sm">A</div>
+                <span class="text-lg font-bold text-white">Smart ATS Builder</span>
+            </div>
+            <div class="hidden md:flex items-center gap-6">
+                <a href="#" onclick="showSection('landing')" class="text-sm text-gray-300 hover:text-white transition">Home</a>
+                <a href="#" onclick="showSection('wizard')" class="text-sm text-gray-300 hover:text-white transition">Build Resume</a>
+                <a href="#" onclick="showReferralModal()" class="text-sm text-gray-300 hover:text-white transition">Earn Credits</a>
+                <button onclick="showSection('wizard')" class="px-4 py-2 gradient-bg rounded-lg text-white text-sm font-medium btn-glow transition-all">Get Started</button>
+            </div>
+            <button id="mobileMenuBtn" onclick="toggleMobileMenu()" class="md:hidden text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+    </div>
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden glass border-t border-white/10">
+        <div class="px-4 py-3 space-y-2">
+            <a href="#" onclick="showSection('landing'); toggleMobileMenu()" class="block py-2 text-gray-300 hover:text-white">Home</a>
+            <a href="#" onclick="showSection('wizard'); toggleMobileMenu()" class="block py-2 text-gray-300 hover:text-white">Build Resume</a>
+            <a href="#" onclick="showReferralModal(); toggleMobileMenu()" class="block py-2 text-gray-300 hover:text-white">Earn Credits</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Landing Page -->
+<section id="landing" class="min-h-screen flex items-center relative pt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="slide-up">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-cyan-400 mb-6">
+                    <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+                    Trusted by 50,000+ Job Seekers
+                </div>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-6">
+                    Build Your <span class="gradient-text">ATS-Friendly</span> Resume in Minutes
+                </h1>
+                <p class="text-lg text-gray-400 mb-8 max-w-lg">
+                    Create professional resumes tailored for your dream job. Beat applicant tracking systems and land more interviews.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 mb-10">
+                    <button onclick="showSection('wizard')" class="px-8 py-4 gradient-bg rounded-xl text-white font-semibold text-lg btn-glow transition-all flex items-center justify-center gap-2">
+                        Get Started Free
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </button>
+                    <button onclick="showSection('wizard')" class="px-8 py-4 glass rounded-xl text-white font-medium text-lg hover:bg-white/10 transition-all">
+                        View Templates
+                    </button>
+                </div>
+                <div class="flex items-center gap-6 text-sm text-gray-400">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        100% Free
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        ATS Optimized
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        PDF Export
+                    </div>
+                </div>
+            </div>
+            <div class="relative float-animation hidden lg:block">
+                <div class="glass rounded-2xl p-8 glow">
+                    <div class="bg-white rounded-xl p-6 shadow-2xl">
+                        <div class="text-center mb-4">
+                            <div class="text-xl font-bold text-gray-900">John Anderson</div>
+                            <div class="text-xs text-gray-500">john@email.com | (555) 123-4567 | New York, NY</div>
+                        </div>
+                        <div class="border-t-2 border-gray-900 pt-3 mb-3">
+                            <div class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">Professional Summary</div>
+                            <div class="text-xs text-gray-600 leading-relaxed">Results-driven software engineer with 3+ years of experience...</div>
+                        </div>
+                        <div class="border-t border-gray-200 pt-3 mb-3">
+                            <div class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">Experience</div>
+                            <div class="text-xs font-semibold text-gray-800">Senior Developer - Tech Corp</div>
+                            <div class="text-xs text-gray-500 mb-1">Jan 2022 - Present</div>
+                            <div class="text-xs text-gray-600">• Led team of 5 engineers</div>
+                            <div class="text-xs text-gray-600">• Increased performance by 40%</div>
+                        </div>
+                        <div class="border-t border-gray-200 pt-3">
+                            <div class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">Skills</div>
+                            <div class="text-xs text-gray-600">JavaScript, Python, React, Node.js, SQL, AWS</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-sm text-green-400 font-medium">ATS Score: 94/100</span>
+                        </div>
+                        <div class="text-sm text-gray-400">Ready to download</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold gradient-text">50K+</div>
+                <div class="text-sm text-gray-400 mt-1">Resumes Created</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold gradient-text">95%</div>
+                <div class="text-sm text-gray-400 mt-1">ATS Pass Rate</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold gradient-text">10+</div>
+                <div class="text-sm text-gray-400 mt-1">Domains Covered</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center">
+                <div class="text-3xl font-bold gradient-text">Free</div>
+                <div class="text-sm text-gray-400 mt-1">Forever Plan</div>
+            </div>
+        </div>
+        
+        <!-- Features -->
+        <div class="mt-24">
+            <h2 class="text-3xl font-bold text-center mb-4">Why Choose <span class="gradient-text">Smart ATS Builder</span>?</h2>
+            <p class="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Our intelligent resume builder understands what ATS systems look for and helps you create the perfect resume.</p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="glass rounded-2xl p-8 step-card">
+                    <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mb-4 text-2xl">📝</div>
+                    <h3 class="text-xl font-bold mb-3">Step-by-Step Wizard</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Follow our guided process to build your resume section by section with smart suggestions.</p>
+                </div>
+                <div class="glass rounded-2xl p-8 step-card">
+                    <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mb-4 text-2xl">🎯</div>
+                    <h3 class="text-xl font-bold mb-3">ATS Optimized</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Real-time ATS score analysis with keyword suggestions to maximize your chances.</p>
+                </div>
+                <div class="glass rounded-2xl p-8 step-card">
+                    <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mb-4 text-2xl">📄</div>
+                    <h3 class="text-xl font-bold mb-3">Multiple Exports</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Download your resume as PDF or Image. Share directly with employers.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Wizard Section -->
+<section id="wizard" class="min-h-screen pt-20 section-hidden">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Progress Bar -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-gray-400">Step <span id="currentStepNum">1</span> of 4</span>
+                <span class="text-sm text-gray-400"><span id="progressPercent">25</span>% Complete</span>
+            </div>
+            <div class="w-full bg-surface rounded-full h-2">
+                <div id="progressBarFill" class="gradient-bg h-2 rounded-full progress-bar" style="width: 25%"></div>
+            </div>
+            <div class="flex justify-between mt-3">
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-indigo-500" id="dot1"></div><span class="text-xs text-gray-400 hidden sm:inline">Type</span></div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-gray-600" id="dot2"></div><span class="text-xs text-gray-400 hidden sm:inline">Style</span></div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-gray-600" id="dot3"></div><span class="text-xs text-gray-400 hidden sm:inline">Domain</span></div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-full bg-gray-600" id="dot4"></div><span class="text-xs text-gray-400 hidden sm:inline">Export</span></div>
+            </div>
+        </div>
+
+        <!-- Step 1: Document Type -->
+        <div id="step1" class="slide-up">
+            <h2 class="text-3xl font-bold text-center mb-3">What do you want to create?</h2>
+            <p class="text-gray-400 text-center mb-10">Choose the type of document that best fits your needs.</p>
+            <div class="grid sm:grid-cols-2 gap-6 max-w-xl mx-auto">
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center" onclick="selectOption('docType', 'resume', this)" data-group="docType">
+                    <div class="text-5xl mb-4">📄</div>
+                    <h3 class="text-xl font-bold mb-2">Resume</h3>
+                    <p class="text-sm text-gray-400">Concise 1-2 page document focused on relevant experience</p>
+                </div>
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center" onclick="selectOption('docType', 'cv', this)" data-group="docType">
+                    <div class="text-5xl mb-4">📋</div>
+                    <h3 class="text-xl font-bold mb-2">CV</h3>
+                    <p class="text-sm text-gray-400">Comprehensive document with full academic & professional history</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Format Style -->
+        <div id="step2" class="hidden">
+            <h2 class="text-3xl font-bold text-center mb-3">Choose your format style</h2>
+            <p class="text-gray-400 text-center mb-10">Select the format that works best for your application.</p>
+            <div class="grid sm:grid-cols-2 gap-6 max-w-xl mx-auto">
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center relative" onclick="selectOption('formatStyle', 'ats', this)" data-group="formatStyle">
+                    <div class="absolute -top-3 right-4 px-3 py-1 bg-green-500 rounded-full text-xs font-bold text-white">Recommended</div>
+                    <div class="text-5xl mb-4">🎯</div>
+                    <h3 class="text-xl font-bold mb-2">ATS-Friendly</h3>
+                    <p class="text-sm text-gray-400">Optimized for applicant tracking systems with maximum compatibility</p>
+                </div>
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center" onclick="selectOption('formatStyle', 'simple', this)" data-group="formatStyle">
+                    <div class="text-5xl mb-4">📝</div>
+                    <h3 class="text-xl font-bold mb-2">Simple / Basic</h3>
+                    <p class="text-sm text-gray-400">Clean and straightforward layout for traditional applications</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Target Domain -->
+        <div id="step3" class="hidden">
+            <h2 class="text-3xl font-bold text-center mb-3">Select your target domain</h2>
+            <p class="text-gray-400 text-center mb-10">We'll suggest relevant keywords and optimize your content.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'data-analyst', this)" data-group="domain">
+                    <div class="text-3xl mb-2">📊</div>
+                    <h3 class="font-semibold text-sm">Data Analyst</h3>
+                </div>
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'software-developer', this)" data-group="domain">
+                    <div class="text-3xl mb-2">💻</div>
+                    <h3 class="font-semibold text-sm">Software Developer</h3>
+                </div>
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'web-developer', this)" data-group="domain">
+                    <div class="text-3xl mb-2">🌐</div>
+                    <h3 class="font-semibold text-sm">Web Developer</h3>
+                </div>
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'marketing', this)" data-group="domain">
+                    <div class="text-3xl mb-2">📢</div>
+                    <h3 class="font-semibold text-sm">Marketing</h3>
+                </div>
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'finance', this)" data-group="domain">
+                    <div class="text-3xl mb-2">💰</div>
+                    <h3 class="font-semibold text-sm">Finance</h3>
+                </div>
+                <div class="step-card glass rounded-xl p-6 cursor-pointer text-center" onclick="selectOption('domain', 'other', this)" data-group="domain">
+                    <div class="text-3xl mb-2">✨</div>
+                    <h3 class="font-semibold text-sm">Other</h3>
+                </div>
+            </div>
+            <div id="customDomainInput" class="hidden max-w-md mx-auto mt-6">
+                <input type="text" id="customDomain" placeholder="Enter your target domain..." class="w-full px-4 py-3 bg-surface border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500">
+            </div>
+        </div>
+
+        <!-- Step 4: Export Format -->
+        <div id="step4" class="hidden">
+            <h2 class="text-3xl font-bold text-center mb-3">Choose export format</h2>
+            <p class="text-gray-400 text-center mb-10">You can always change this later when downloading.</p>
+            <div class="grid sm:grid-cols-2 gap-6 max-w-xl mx-auto">
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center" onclick="selectOption('exportFormat', 'pdf', this)" data-group="exportFormat">
+                    <div class="text-5xl mb-4">📑</div>
+                    <h3 class="text-xl font-bold mb-2">PDF</h3>
+                    <p class="text-sm text-gray-400">Industry standard format accepted everywhere</p>
+                </div>
+                <div class="step-card glass rounded-2xl p-8 cursor-pointer text-center" onclick="selectOption('exportFormat', 'image', this)" data-group="exportFormat">
+                    <div class="text-5xl mb-4">🖼️</div>
+                    <h3 class="text-xl font-bold mb-2">Image (PNG)</h3>
+                    <p class="text-sm text-gray-400">High-resolution image for portfolios and sharing</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between mt-10 max-w-2xl mx-auto">
+            <button id="prevBtn" onclick="prevStep()" class="px-6 py-3 glass rounded-xl text-white font-medium hover:bg-white/10 transition-all hidden">
+                ← Previous
+            </button>
+            <div class="flex-1"></div>
+            <button id="nextBtn" onclick="nextStep()" class="px-8 py-3 gradient-bg rounded-xl text-white font-medium btn-glow transition-all opacity-50 cursor-not-allowed" disabled>
+                Next →
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Resume Builder Section -->
+<section id="builder" class="min-h-screen pt-20 section-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Form Panel -->
+            <div class="w-full lg:w-1/2 space-y-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold">Fill Your Details</h2>
+                    <button onclick="showSection('wizard')" class="text-sm text-indigo-400 hover:text-indigo-300">← Back to Wizard</button>
+                </div>
+
+                <!-- ATS Score -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-semibold text-lg">ATS Score</h3>
+                        <span id="atsScoreText" class="text-2xl font-bold gradient-text">0</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="atsScoreBar" class="h-3 rounded-full transition-all duration-500" style="width: 0%; background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);"></div>
+                    </div>
+                    <p id="atsScoreMsg" class="text-xs text-gray-400 mt-2">Start filling your details to see your ATS score.</p>
+                </div>
+
+                <!-- Keyword Suggestions -->
+                <div id="keywordSection" class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-3">Suggested Keywords for <span id="domainLabel" class="text-indigo-400">your domain</span></h3>
+                    <p class="text-xs text-gray-400 mb-3">Click to add to your skills:</p>
+                    <div id="keywordContainer" class="flex flex-wrap gap-1"></div>
+                </div>
+
+                <!-- Personal Info -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">1</span>
+                        Personal Information
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Full Name *</label>
+                            <input type="text" id="fullName" placeholder="John Anderson" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Job Title</label>
+                            <input type="text" id="jobTitle" placeholder="Software Developer" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Email *</label>
+                            <input type="email" id="email" placeholder="john@email.com" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 mb-1 block">Phone *</label>
+                            <input type="tel" id="phone" placeholder="(555) 123-4567" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-xs text-gray-400 mb-1 block">Location</label>
+                            <input type="text" id="location" placeholder="New York, NY" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-xs text-gray-400 mb-1 block">LinkedIn / Portfolio URL</label>
+                            <input type="url" id="linkedin" placeholder="https://linkedin.com/in/john" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Professional Summary -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">2</span>
+                        Professional Summary
+                    </h3>
+                    <textarea id="summary" rows="4" placeholder="Results-driven professional with X+ years of experience in... Skilled in... Proven track record of..." oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm resize-none"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Tip: Keep it 2-4 sentences. Include key skills and years of experience.</p>
+                </div>
+
+                <!-- Education -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">3</span>
+                        Education
+                    </h3>
+                    <div id="educationList" class="space-y-4">
+                        <div class="education-entry bg-dark rounded-xl p-4 space-y-3">
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                <input type="text" placeholder="Degree (e.g., B.S. Computer Science)" oninput="updatePreview()" class="edu-degree w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                                <input type="text" placeholder="Institution Name" oninput="updatePreview()" class="edu-school w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                <input type="text" placeholder="Year (e.g., 2020 - 2024)" oninput="updatePreview()" class="edu-year w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                                <input type="text" placeholder="GPA (optional)" oninput="updatePreview()" class="edu-gpa w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="addEducation()" class="mt-3 text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Education
+                    </button>
+                </div>
+
+                <!-- Experience -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">4</span>
+                        Experience
+                    </h3>
+                    <div id="experienceList" class="space-y-4">
+                        <div class="experience-entry bg-dark rounded-xl p-4 space-y-3">
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                <input type="text" placeholder="Job Title" oninput="updatePreview()" class="exp-title w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                                <input type="text" placeholder="Company Name" oninput="updatePreview()" class="exp-company w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <input type="text" placeholder="Duration (e.g., Jan 2022 - Present)" oninput="updatePreview()" class="exp-duration w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                            <textarea placeholder="Key responsibilities and achievements (one per line)&#10;• Led development of...&#10;• Improved performance by..." rows="4" oninput="updatePreview()" class="exp-desc w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                    <button onclick="addExperience()" class="mt-3 text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Experience
+                    </button>
+                </div>
+
+                <!-- Skills -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">5</span>
+                        Skills
+                    </h3>
+                    <textarea id="skills" rows="3" placeholder="JavaScript, Python, React, Node.js, SQL, Data Analysis, Project Management..." oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm resize-none"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Separate skills with commas.</p>
+                </div>
+
+                <!-- Projects -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">6</span>
+                        Projects
+                    </h3>
+                    <div id="projectsList" class="space-y-4">
+                        <div class="project-entry bg-dark rounded-xl p-4 space-y-3">
+                            <input type="text" placeholder="Project Name" oninput="updatePreview()" class="proj-name w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                            <textarea placeholder="Project description and technologies used..." rows="3" oninput="updatePreview()" class="proj-desc w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                    <button onclick="addProject()" class="mt-3 text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Project
+                    </button>
+                </div>
+
+                <!-- Certifications -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 gradient-bg rounded-lg flex items-center justify-center text-xs font-bold">7</span>
+                        Certifications (Optional)
+                    </h3>
+                    <textarea id="certifications" rows="3" placeholder="AWS Certified Developer - 2023&#10;Google Analytics Certified - 2022" oninput="updatePreview()" class="w-full px-4 py-3 bg-dark border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 text-sm resize-none"></textarea>
+                </div>
+
+                <!-- Download Buttons -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold text-lg mb-4">Download Your Resume</h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <button onclick="downloadPDF()" class="px-6 py-4 gradient-bg rounded-xl text-white font-semibold btn-glow transition-all flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Download PDF
+                        </button>
+                        <button onclick="downloadImage()" class="px-6 py-4 glass rounded-xl text-white font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            Download Image
+                        </button>
+                    </div>
+                    <div class="mt-4 flex gap-3">
+                        <button onclick="showReferralModal()" class="flex-1 px-4 py-3 border border-indigo-500/30 rounded-xl text-indigo-400 text-sm hover:bg-indigo-500/10 transition-all flex items-center justify-center gap-2">
+                            🎁 Earn Free Credits
+                        </button>
+                        <button onclick="shareResume()" class="flex-1 px-4 py-3 border border-cyan-500/30 rounded-xl text-cyan-400 text-sm hover:bg-cyan-500/10 transition-all flex items-center justify-center gap-2">
+                            🔗 Share with Friends
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="w-full lg:w-1/2 lg:sticky lg:top-20" style="max-height: calc(100vh - 100px); overflow-y: auto;">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold">Live Preview</h2>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-green-400">Live</span>
+                    </div>
+                </div>
+                <div class="glass rounded-2xl p-4 sm:p-6">
+                    <div id="resumePreview" class="resume-preview rounded-xl p-6 sm:p-8 min-h-[800px]" style="font-family: Calibri, Arial, sans-serif;">
+                        <div class="text-center text-gray-400 mt-20">
+                            <p class="text-lg">Your resume preview will appear here</p>
+                            <p class="text-sm mt-2">Start filling in your details on the left</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Referral Modal -->
+<div id="referralModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="modal-overlay absolute inset-0" onclick="closeReferralModal()"></div>
+    <div class="relative glass rounded-3xl p-8 max-w-md w-full mx-4 slide-up">
+        <button onclick="closeReferralModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="text-center">
+            <div class="text-5xl mb-4">🎁</div>
+            <h3 class="text-2xl font-bold mb-2">Invite Friends & Earn Credits!</h3>
+            <p class="text-gray-400 text-sm mb-6">Share your unique referral link. Each successful signup earns you +1 credit for premium templates.</p>
+            
+            <div class="glass rounded-xl p-4 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-sm text-gray-400">Total Credits</div>
+                        <div class="text-3xl font-bold gradient-text" id="totalCredits">3</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Premium Unlock</div>
+                        <div class="text-3xl font-bold text-gray-500">5 needed</div>
+                    </div>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div class="gradient-bg h-2 rounded-full" style="width: 60%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">2 more referrals to unlock premium templates!</p>
+            </div>
+
+            <div class="mb-6">
+                <label class="text-xs text-gray-400 mb-2 block text-left">Your Referral Link</label>
+                <div class="flex gap-2">
+                    <input type="text" id="referralLink" value="https://atsbuilder.com/ref/USER2847" readonly class="flex-1 px-4 py-3 bg-dark border border-white/10 rounded-xl text-white text-sm focus:outline-none">
+                    <button onclick="copyReferralLink()" id="copyBtn" class="px-4 py-3 gradient-bg rounded-xl text-white text-sm font-medium btn-glow transition-all">
+                        Copy
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="shareVia('twitter')" class="py-3 bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-400 text-sm hover:bg-blue-500/30 transition">Twitter</button>
+                <button onclick="shareVia('linkedin')" class="py-3 bg-blue-700/20 border border-blue-700/30 rounded-xl text-blue-300 text-sm hover:bg-blue-700/30 transition">LinkedIn</button>
+                <button onclick="shareVia('whatsapp')" class="py-3 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400 text-sm hover:bg-green-500/30 transition">WhatsApp</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div class="glass rounded-xl px-6 py-4 flex items-center gap-3 shadow-2xl">
+        <div id="toastIcon" class="text-2xl">✅</div>
+        <div>
+            <div id="toastTitle" class="font-semibold text-sm">Success</div>
+            <div id="toastMsg" class="text-xs text-gray-400">Action completed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Pre-fill Template Modal -->
+<div id="templateModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="modal-overlay absolute inset-0" onclick="closeTemplateModal()"></div>
+    <div class="relative glass rounded-3xl p-8 max-w-md w-full mx-4 slide-up">
+        <button onclick="closeTemplateModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="text-center">
+            <div class="text-5xl mb-4">✨</div>
+            <h3 class="text-2xl font-bold mb-2">Pre-fill Template?</h3>
+            <p class="text-gray-400 text-sm mb-6">We have a pre-filled template for <strong id="templateDomainName" class="text-indigo-400"></strong>. Would you like to use it as a starting point?</p>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeTemplateModal()" class="py-3 glass rounded-xl text-white font-medium hover:bg-white/10 transition">Start Blank</button>
+                <button onclick="applyTemplate()" class="py-3 gradient-bg rounded-xl text-white font-medium btn-glow transition-all">Use Template</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// State
+let currentStep = 1;
+let selections = { docType: null, formatStyle: null, domain: null, exportFormat: null };
+let referralCredits = 3;
+
+// Domain Keywords
+const domainKeywords = {
+    'data-analyst': ['SQL', 'Python', 'Excel', 'Tableau', 'Power BI', 'Data Visualization', 'Statistical Analysis', 'R', 'Data Mining', 'ETL', 'Machine Learning', 'Pandas', 'NumPy', 'A/B Testing', 'Data Modeling', 'BigQuery', 'Looker'],
+    'software-developer': ['JavaScript', 'Python', 'Java', 'C++', 'Git', 'Agile', 'REST APIs', 'Microservices', 'Docker', 'CI/CD', 'Unit Testing', 'OOP', 'Design Patterns', 'AWS', 'System Design', 'Kubernetes'],
+    'web-developer': ['HTML', 'CSS', 'JavaScript', 'React', 'Node.js', 'TypeScript', 'REST APIs', 'MongoDB', 'PostgreSQL', 'Tailwind CSS', 'Next.js', 'Vue.js', 'Webpack', 'Git', 'Responsive Design', 'GraphQL'],
+    'marketing': ['SEO', 'Google Analytics', 'Content Marketing', 'Social Media', 'Email Marketing', 'PPC', 'Brand Strategy', 'Market Research', 'CRM', 'Copywriting', 'A/B Testing', 'HubSpot', 'Google Ads', 'Facebook Ads', 'Marketing Automation'],
+    'finance': ['Financial Modeling', 'Excel', 'Bloomberg', 'Risk Analysis', 'Accounting', 'Budgeting', 'Forecasting', 'Valuation', 'GAAP', 'Financial Reporting', 'SAP', 'QuickBooks', 'Data Analysis', 'Portfolio Management', 'Compliance'],
+    'other': ['Communication', 'Problem Solving', 'Leadership', 'Project Management', 'Teamwork', 'Time Management', 'Critical Thinking', 'Adaptability', 'Microsoft Office', 'Presentation Skills']
+};
+
+const domainTemplates = {
+    'data-analyst': {
+        jobTitle: 'Data Analyst',
+        summary: 'Detail-oriented Data Analyst with experience in transforming complex datasets into actionable insights. Proficient in SQL, Python, and data visualization tools. Skilled at identifying trends, building dashboards, and supporting data-driven decision-making.',
+        skills: 'SQL, Python, Excel, Tableau, Power BI, R, Pandas, NumPy, Data Visualization, Statistical Analysis, ETL, A/B Testing, Data Modeling, BigQuery',
+        education: { degree: 'B.S. in Data Science', school: 'State University', year: '2020 - 2024', gpa: '3.7/4.0' },
+        experience: { title: 'Junior Data Analyst', company: 'Analytics Corp', duration: 'Jun 2023 - Present', desc: '• Analyzed large datasets using SQL and Python to identify key business trends\n• Created interactive Tableau dashboards reducing reporting time by 40%\n• Conducted A/B testing for marketing campaigns, improving conversion by 15%\n• Collaborated with cross-functional teams to define KPIs and metrics' },
+        project: { name: 'Sales Prediction Dashboard', desc: 'Built a machine learning model using Python and scikit-learn to predict quarterly sales with 92% accuracy. Created an interactive Power BI dashboard for stakeholders.' },
+        certifications: 'Google Data Analytics Certificate - 2023\nTableau Desktop Specialist - 2023'
+    },
+    'software-developer': {
+        jobTitle: 'Software Developer',
+        summary: 'Results-driven Software Developer with strong experience in building scalable applications. Proficient in multiple programming languages and frameworks with a passion for clean code and best practices.',
+        skills: 'JavaScript, Python, Java, React, Node.js, Git, Docker, REST APIs, SQL, MongoDB, AWS, CI/CD, Agile, Unit Testing, System Design',
+        education: { degree: 'B.S. in Computer Science', school: 'Tech University', year: '2019 - 2023', gpa: '3.8/4.0' },
+        experience: { title: 'Software Developer', company: 'TechStartup Inc.', duration: 'Jul 2023 - Present', desc: '• Developed and maintained RESTful APIs serving 100K+ daily requests\n• Implemented CI/CD pipelines reducing deployment time by 60%\n• Led migration from monolithic to microservices architecture\n• Wrote comprehensive unit and integration tests achieving 90% coverage' },
+        project: { name: 'E-Commerce Platform', desc: 'Full-stack e-commerce application built with React, Node.js, and PostgreSQL. Implemented payment processing, user authentication, and real-time inventory management.' },
+        certifications: 'AWS Certified Developer Associate - 2023'
+    },
+    'web-developer': {
+        jobTitle: 'Web Developer',
+        summary: 'Creative Web Developer with expertise in modern frontend and backend technologies. Passionate about building responsive, accessible, and performant web applications with exceptional user experiences.',
+        skills: 'HTML, CSS, JavaScript, React, Next.js, TypeScript, Node.js, Express, MongoDB, PostgreSQL, Tailwind CSS, Git, REST APIs, GraphQL, Responsive Design',
+        education: { degree: 'B.S. in Computer Science', school: 'Digital University', year: '2019 - 2023', gpa: '3.6/4.0' },
+        experience: { title: 'Frontend Developer', company: 'WebAgency Co.', duration: 'Aug 2023 - Present', desc: '• Built responsive web applications using React and Next.js for 20+ clients\n• Improved Core Web Vitals scores by 45% through performance optimization\n• Implemented accessible UI components following WCAG 2.1 guidelines\n• Collaborated with designers to translate Figma mockups into pixel-perfect code' },
+        project: { name: 'Portfolio Website Builder', desc: 'A drag-and-drop portfolio builder using React, TypeScript, and Tailwind CSS. Features real-time preview, custom themes, and one-click deployment to Vercel.' },
+        certifications: 'Meta Front-End Developer Certificate - 2023'
+    },
+    'marketing': {
+        jobTitle: 'Marketing Specialist',
+        summary: 'Creative Marketing Specialist with expertise in digital marketing strategies, content creation, and data-driven campaign optimization. Proven track record of increasing brand awareness and driving customer acquisition.',
+        skills: 'SEO, Google Analytics, Google Ads, Facebook Ads, Content Marketing, Email Marketing, Social Media Marketing, CRM, HubSpot, Copywriting, A/B Testing, Market Research, Brand Strategy',
+        education: { degree: 'B.A. in Marketing', school: 'Business University', year: '2019 - 2023', gpa: '3.7/4.0' },
+        experience: { title: 'Digital Marketing Associate', company: 'BrandGrowth Inc.', duration: 'Jun 2023 - Present', desc: '• Managed social media accounts with 200K+ combined followers\n• Executed PPC campaigns generating $500K in revenue with 4x ROAS\n• Increased organic traffic by 120% through SEO optimization\n• Created and managed email campaigns with 35% open rate' },
+        project: { name: 'Product Launch Campaign', desc: 'Led end-to-end marketing campaign for SaaS product launch. Coordinated content, paid ads, and influencer partnerships resulting in 10K sign-ups in the first month.' },
+        certifications: 'Google Analytics Certified - 2023\nHubSpot Inbound Marketing Certified - 2023'
+    },
+    'finance': {
+        jobTitle: 'Financial Analyst',
+        summary: 'Analytical Financial Analyst with strong skills in financial modeling, forecasting, and data analysis. Experienced in preparing reports, managing budgets, and providing strategic recommendations to stakeholders.',
+        skills: 'Financial Modeling, Excel, Bloomberg Terminal, SQL, Financial Reporting, Budgeting, Forecasting, Risk Analysis, Valuation, GAAP, SAP, QuickBooks, Data Analysis, Presentation Skills',
+        education: { degree: 'B.S. in Finance', school: 'Business School', year: '2019 - 2023', gpa: '3.8/4.0' },
+        experience: { title: 'Junior Financial Analyst', company: 'Capital Partners LLC', duration: 'Jul 2023 - Present', desc: '• Built financial models for M&A transactions valued at $50M+\n• Prepared weekly and monthly financial reports for C-suite executives\n• Conducted industry analysis and competitive benchmarking\n• Reduced budget variance by 15% through improved forecasting models' },
+        project: { name: 'Investment Portfolio Analyzer', desc: 'Developed an Excel-based tool with VBA macros to analyze portfolio performance, calculate risk metrics, and generate automated reports for fund managers.' },
+        certifications: 'CFA Level I Passed - 2023\nBloomberg Market Concepts - 2023'
+    }
+};
+
+// Particles
+function createParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.top = Math.random() * 100 + '%';
+        p.style.animationDelay = Math.random() * 8 + 's';
+        p.style.animationDuration = (6 + Math.random() * 6) + 's';
+        container.appendChild(p);
+    }
+}
+createParticles();
+
+// Mobile Menu
+function toggleMobileMenu() {
+    document.getElementById('mobileMenu').classList.toggle('hidden');
+}
+
+// Section Navigation
+function showSection(sectionId) {
+    document.querySelectorAll('#landing, #wizard, #builder').forEach(el => {
+        el.classList.add('section-hidden');
+        el.classList.remove('section-visible');
+    });
+    const target = document.getElementById(sectionId);
+    target.classList.remove('section-hidden');
+    target.classList.add('section-visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Wizard Logic
+function selectOption(group, value, element) {
+    // Clear previous selection in group
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    selections[group] = value;
+    
+    // Show custom domain input
+    if (group === 'domain' && value === 'other') {
+        document.getElementById('customDomainInput').classList.remove('hidden');
+    } else if (group === 'domain') {
+        document.getElementById('customDomainInput').classList.add('hidden');
+    }
+    
+    // Enable next button
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.disabled = false;
+    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+}
+
+function nextStep() {
+    if (currentStep >= 4) {
+        // Go to builder
+        setupBuilder();
+        showSection('builder');
+        return;
+    }
+    
+    document.getElementById(`step${currentStep}`).classList.add('hidden');
+    currentStep++;
+    document.getElementById(`step${currentStep}`).classList.remove('hidden');
+    document.getElementById(`step${currentStep}`).classList.add('slide-up');
+    
+    updateProgress();
+    
+    // Reset next button state
+    const stepSelections = ['docType', 'formatStyle', 'domain', 'exportFormat'];
+    const currentSelection = stepSelections[currentStep - 1];
+    const nextBtn = document.getElementById('nextBtn');
+    if (!selections[currentSelection]) {
+        nextBtn.disabled = true;
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    // Show/hide prev button
+    document.getElementById('prevBtn').classList.remove('hidden');
+    
+    // Change next button text on last step
+    if (currentStep === 4) {
+        nextBtn.textContent = 'Build Resume →';
+    }
+}
+
+function prevStep() {
+    if (currentStep <= 1) return;
+    
+    document.getElementById(`step${currentStep}`).classList.add('hidden');
+    currentStep--;
+    document.getElementById(`step${currentStep}`).classList.remove('hidden');
+    
+    updateProgress();
+    
+    if (currentStep === 1) {
+        document.getElementById('prevBtn').classList.add('hidden');
+    }
+    
+    document.getElementById('nextBtn').textContent = 'Next →';
+    
+    // Enable next since they already selected
+    const stepSelections = ['docType', 'formatStyle', 'domain', 'exportFormat'];
+    if (selections[stepSelections[currentStep - 1]]) {
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+function updateProgress() {
+    const percent = currentStep * 25;
+    document.getElementById('progressBarFill').style.width = percent + '%';
+    document.getElementById('currentStepNum').textContent = currentStep;
+    document.getElementById('progressPercent').textContent = percent;
+    
+    for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('dot' + i);
+        if (i <= currentStep) {
+            dot.classList.remove('bg-gray-600');
+            dot.classList.add('bg-indigo-500');
+        } else {
+            dot.classList.remove('bg-indigo-500');
+            dot.classList.add('bg-gray-600');
+        }
+    }
+}
+
+// Setup Builder
+function setupBuilder() {
+    const domain = selections.domain;
+    const domainNames = {
+        'data-analyst': 'Data Analyst',
+        'software-developer': 'Software Developer',
+        'web-developer': 'Web Developer',
+        'marketing': 'Marketing',
+        'finance': 'Finance',
+        'other': 'General'
+    };
+    
+    document.getElementById('domainLabel').textContent = domainNames[domain] || 'General';
+    
+    // Populate keywords
+    const keywords = domainKeywords[domain] || domainKeywords['other'];
+    const container = document.getElementById('keywordContainer');
+    container.innerHTML = '';
+    keywords.forEach(kw => {
+        const tag = document.createElement('span');
+        tag.className = 'keyword-tag bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30';
+        tag.textContent = kw;
+        tag.onclick = () => addKeywordToSkills(kw);
+        container.appendChild(tag);
+    });
+    
+    // Show template modal if template available
+    if (domainTemplates[domain]) {
+        document.getElementById('templateDomainName').textContent = domainNames[domain];
+        setTimeout(() => {
+            document.getElementById('templateModal').classList.remove('hidden');
+            document.getElementById('templateModal').classList.add('flex');
+        }, 500);
+    }
+    
+    updatePreview();
+}
+
+function addKeywordToSkills(keyword) {
+    const skillsInput = document.getElementById('skills');
+    const currentSkills = skillsInput.value.split(',').map(s => s.trim()).filter(s => s);
+    if (!currentSkills.includes(keyword)) {
+        currentSkills.push(keyword);
+        skillsInput.value = currentSkills.join(', ');
+        updatePreview();
+        showToast('✅', 'Skill Added', `"${keyword}" added to your skills`);
+    }
+}
+
+function applyTemplate() {
+    const template = domainTemplates[selections.domain];
+    if (!template) return;
+    
+    document.getElementById('jobTitle').value = template.jobTitle;
+    document.getElementById('summary').value = template.summary;
+    document.getElementById('skills').value = template.skills;
+    document.getElementById('certifications').value = template.certifications;
+    
+    // Education
+    const eduEntry = document.querySelector('.education-entry');
+    if (eduEntry) {
+        eduEntry.querySelector('.edu-degree').value = template.education.degree;
+        eduEntry.querySelector('.edu-school').value = template.education.school;
+        eduEntry.querySelector('.edu-year').value = template.education.year;
+        eduEntry.querySelector('.edu-gpa').value = template.education.gpa;
+    }
+    
+    // Experience
+    const expEntry = document.querySelector('.experience-entry');
+    if (expEntry) {
+        expEntry.querySelector('.exp-title').value = template.experience.title;
+        expEntry.querySelector('.exp-company').value = template.experience.company;
+        expEntry.querySelector('.exp-duration').value = template.experience.duration;
+        expEntry.querySelector('.exp-desc').value = template.experience.desc;
+    }
+    
+    // Project
+    const projEntry = document.querySelector('.project-entry');
+    if (projEntry) {
+        projEntry.querySelector('.proj-name').value = template.project.name;
+        projEntry.querySelector('.proj-desc').value = template.project.desc;
+    }
+    
+    closeTemplateModal();
+    updatePreview();
+    showToast('✨', 'Template Applied', 'Pre-filled template has been applied!');
+}
+
+function closeTemplateModal() {
+    document.getElementById('templateModal').classList.add('hidden');
+    document.getElementById('templateModal').classList.remove('flex');
+}
+
+// Add Form Entries
+function addEducation() {
+    const html = `
+        <div class="education-entry bg-dark rounded-xl p-4 space-y-3 relative">
+            <button onclick="this.parentElement.remove(); updatePreview();" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-xs">✕ Remove</button>
+            <div class="grid sm:grid-cols-2 gap-3">
+                <input type="text" placeholder="Degree" oninput="updatePreview()" class="edu-degree w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                <input type="text" placeholder="Institution" oninput="updatePreview()" class="edu-school w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+                <input type="text" placeholder="Year" oninput="updatePreview()" class="edu-year w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                <input type="text" placeholder="GPA (optional)" oninput="updatePreview()" class="edu-gpa w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+        </div>`;
+    document.getElementById('educationList').insertAdjacentHTML('beforeend', html);
+}
+
+function addExperience() {
+    const html = `
+        <div class="experience-entry bg-dark rounded-xl p-4 space-y-3 relative">
+            <button onclick="this.parentElement.remove(); updatePreview();" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-xs">✕ Remove</button>
+            <div class="grid sm:grid-cols-2 gap-3">
+                <input type="text" placeholder="Job Title" oninput="updatePreview()" class="exp-title w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+                <input type="text" placeholder="Company" oninput="updatePreview()" class="exp-company w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <input type="text" placeholder="Duration" oninput="updatePreview()" class="exp-duration w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+            <textarea placeholder="Key responsibilities..." rows="4" oninput="updatePreview()" class="exp-desc w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        </div>`;
+    document.getElementById('experienceList').insertAdjacentHTML('beforeend', html);
+}
+
+function addProject() {
+    const html = `
+        <div class="project-entry bg-dark rounded-xl p-4 space-y-3 relative">
+            <button onclick="this.parentElement.remove(); updatePreview();" class="absolute top-2 right-2 text-red-400 hover:text-red-300 text-xs">✕ Remove</button>
+            <input type="text" placeholder="Project Name" oninput="updatePreview()" class="proj-name w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500">
+            <textarea placeholder="Description..." rows="3" oninput="updatePreview()" class="proj-desc w-full px-3 py-2 bg-surface border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        </div>`;
+    document.getElementById('projectsList').insertAdjacentHTML('beforeend', html);
+}
+
+// Update Live Preview
+function updatePreview() {
+    const name = document.getElementById('fullName').value;
+    const title = document.getElementById('jobTitle').value;
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    const loc = document.getElementById('location').value;
+    const linkedin = document.getElementById('linkedin').value;
+    const summary = document.getElementById('summary').value;
+    const skills = document.getElementById('skills').value;
+    const certs = document.getElementById('certifications').value;
+
+    // Collect education
+    const educations = [];
+    document.querySelectorAll('.education-entry').forEach(entry => {
+        const deg = entry.querySelector('.edu-degree').value;
+        const sch = entry.querySelector('.edu-school').value;
+        const yr = entry.querySelector('.edu-year').value;
+        const gpa = entry.querySelector('.edu-gpa').value;
+        if (deg || sch) educations.push({ degree: deg, school: sch, year: yr, gpa: gpa });
+    });
+
+    // Collect experience
+    const experiences = [];
+    document.querySelectorAll('.experience-entry').forEach(entry => {
+        const t = entry.querySelector('.exp-title').value;
+        const c = entry.querySelector('.exp-company').value;
+        const d = entry.querySelector('.exp-duration').value;
+        const desc = entry.querySelector('.exp-desc').value;
+        if (t || c) experiences.push({ title: t, company: c, duration: d, description: desc });
+    });
+
+    // Collect projects
+    const projects = [];
+    document.querySelectorAll('.project-entry').forEach(entry => {
+        const n = entry.querySelector('.proj-name').value;
+        const d = entry.querySelector('.proj-desc').value;
+        if (n) projects.push({ name: n, description: d });
+    });
+
+    // Build HTML
+    let html = '';
+    
+    if (!name && !email && !summary && educations.length === 0) {
+        html = '<div style="text-align:center; color:#999; margin-top:80px;"><p style="font-size:16px;">Your resume preview will appear here</p><p style="font-size:12px; margin-top:8px;">Start filling in your details on the left</p></div>';
+        document.getElementById('resumePreview').innerHTML = html;
+        updateATSScore(0);
+        return;
+    }
+
+    // Header
+    if (name) {
+        html += `<h1 style="text-align:center; font-size:24px; font-weight:700; margin-bottom:2px; color:#1a1a1a;">${escapeHtml(name)}</h1>`;
+    }
+    if (title) {
+        html += `<p style="text-align:center; font-size:12px; color:#555; margin-bottom:4px; font-weight:500;">${escapeHtml(title)}</p>`;
+    }
+    
+    const contactParts = [];
+    if (email) contactParts.push(escapeHtml(email));
+    if (phone) contactParts.push(escapeHtml(phone));
+    if (loc) contactParts.push(escapeHtml(loc));
+    if (linkedin) contactParts.push(escapeHtml(linkedin));
+    if (contactParts.length > 0) {
+        html += `<p style="text-align:center; font-size:10px; color:#666; margin-bottom:12px;">${contactParts.join(' | ')}</p>`;
+    }
+
+    // Summary
+    if (summary) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Professional Summary</h2>`;
+        html += `<p style="font-size:11px; color:#333; line-height:1.5;">${escapeHtml(summary)}</p>`;
+    }
+
+    // Experience
+    if (experiences.length > 0) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Experience</h2>`;
+        experiences.forEach(exp => {
+            html += `<div style="margin-bottom:10px;">`;
+            html += `<div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap;">`;
+            html += `<p style="font-size:12px; font-weight:700; color:#1a1a1a; margin:0;">${escapeHtml(exp.title)}${exp.company ? ' - ' + escapeHtml(exp.company) : ''}</p>`;
+            if (exp.duration) html += `<p style="font-size:10px; color:#666; margin:0;">${escapeHtml(exp.duration)}</p>`;
+            html += `</div>`;
+            if (exp.description) {
+                const lines = exp.description.split('\n').filter(l => l.trim());
+                html += '<ul style="padding-left:16px; margin:4px 0;">';
+                lines.forEach(line => {
+                    const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+                    if (clean) html += `<li style="font-size:11px; color:#333; margin-bottom:2px;">${escapeHtml(clean)}</li>`;
+                });
+                html += '</ul>';
+            }
+            html += '</div>';
+        });
+    }
+
+    // Education
+    if (educations.length > 0) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Education</h2>`;
+        educations.forEach(edu => {
+            html += `<div style="margin-bottom:8px;">`;
+            html += `<div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap;">`;
+            html += `<p style="font-size:12px; font-weight:700; color:#1a1a1a; margin:0;">${escapeHtml(edu.degree)}</p>`;
+            if (edu.year) html += `<p style="font-size:10px; color:#666; margin:0;">${escapeHtml(edu.year)}</p>`;
+            html += `</div>`;
+            if (edu.school) html += `<p style="font-size:11px; color:#555; margin:0;">${escapeHtml(edu.school)}${edu.gpa ? ' | GPA: ' + escapeHtml(edu.gpa) : ''}</p>`;
+            html += '</div>';
+        });
+    }
+
+    // Skills
+    if (skills) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Skills</h2>`;
+        html += `<p style="font-size:11px; color:#333; line-height:1.6;">${escapeHtml(skills)}</p>`;
+    }
+
+    // Projects
+    if (projects.length > 0) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Projects</h2>`;
+        projects.forEach(proj => {
+            html += `<div style="margin-bottom:8px;">`;
+            html += `<p style="font-size:12px; font-weight:700; color:#1a1a1a; margin:0 0 2px 0;">${escapeHtml(proj.name)}</p>`;
+            if (proj.description) {
+                const lines = proj.description.split('\n').filter(l => l.trim());
+                if (lines.length > 1) {
+                    html += '<ul style="padding-left:16px; margin:2px 0;">';
+                    lines.forEach(line => {
+                        const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+                        if (clean) html += `<li style="font-size:11px; color:#333; margin-bottom:1px;">${escapeHtml(clean)}</li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += `<p style="font-size:11px; color:#333;">${escapeHtml(proj.description)}</p>`;
+                }
+            }
+            html += '</div>';
+        });
+    }
+
+    // Certifications
+    if (certs) {
+        html += `<h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; border-bottom:2px solid #1a1a1a; padding-bottom:3px; margin:16px 0 8px 0; color:#1a1a1a;">Certifications</h2>`;
+        const certLines = certs.split('\n').filter(l => l.trim());
+        html += '<ul style="padding-left:16px; margin:4px 0;">';
+        certLines.forEach(cert => {
+            html += `<li style="font-size:11px; color:#333; margin-bottom:2px;">${escapeHtml(cert.trim())}</li>`;
+        });
+        html += '</ul>';
+    }
+
+    document.getElementById('resumePreview').innerHTML = html;
+    
+    // Calculate ATS Score
+    calculateATSScore(name, email, phone, summary, skills, educations, experiences, projects, certs);
+}
+
+function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function calculateATSScore(name, email, phone, summary, skills, educations, experiences, projects, certs) {
+    let score = 0;
+    let maxScore = 100;
+    
+    // Personal info (20 points)
+    if (name) score += 5;
+    if (email) score += 5;
+    if (phone) score += 5;
+    if (document.getElementById('location').value) score += 3;
+    if (document.getElementById('linkedin').value) score += 2;
+    
+    // Summary (15 points)
+    if (summary) {
+        score += 5;
+        if (summary.length > 50) score += 5;
+        if (summary.length > 100) score += 5;
+    }
+    
+    // Experience (25 points)
+    if (experiences.length > 0) {
+        score += 10;
+        experiences.forEach(exp => {
+            if (exp.description && exp.description.length > 50) score += 5;
+        });
+        score = Math.min(score, 85); // cap intermediate
+    }
+    
+    // Education (10 points)
+    if (educations.length > 0) score += 10;
+    
+    // Skills (15 points)
+    if (skills) {
+        const skillCount = skills.split(',').filter(s => s.trim()).length;
+        score += Math.min(skillCount * 2, 15);
+    }
+    
+    // Projects (10 points)
+    if (projects.length > 0) score += 7;
+    if (projects.length > 1) score += 3;
+    
+    // Certs (5 points)
+    if (certs && certs.trim()) score += 5;
+    
+    // Keyword match bonus
+    const domain = selections.domain;
+    const keywords = domainKeywords[domain] || [];
+    const allText = (summary + ' ' + skills + ' ' + (experiences.map(e => e.description).join(' '))).toLowerCase();
+    let matchCount = 0;
+    keywords.forEach(kw => {
+        if (allText.includes(kw.toLowerCase())) matchCount++;
+    });
+    // Bonus for keyword matches (up to extra points to reach 100)
+    
+    score = Math.min(score + Math.floor(matchCount * 1.5), 100);
+    
+    updateATSScore(score);
+}
+
+function updateATSScore(score) {
+    document.getElementById('atsScoreText').textContent = score + '/100';
+    document.getElementById('atsScoreBar').style.width = score + '%';
+    
+    let msg = '';
+    let color = '';
+    if (score < 30) {
+        msg = 'Your resume needs more content. Keep filling in details!';
+        color = '#ef4444';
+    } else if (score < 60) {
+        msg = 'Getting better! Add more details and relevant keywords.';
+        color = '#f59e0b';
+    } else if (score < 80) {
+        msg = 'Good job! Your resume is looking solid. Add a few more details.';
+        color = '#22c55e';
+    } else {
+        msg = 'Excellent! Your resume is well-optimized for ATS systems!';
+        color = '#22c55e';
+    }
+    
+    document.getElementById('atsScoreMsg').textContent = msg;
+    document.getElementById('atsScoreBar').style.background = `linear-gradient(90deg, ${score < 30 ? '#ef4444' : score < 60 ? '#f59e0b' : '#22c55e'}, ${color})`;
+}
+
+// Download Functions
+function downloadPDF() {
+    const element = document.getElementById('resumePreview');
+    const name = document.getElementById('fullName').value || 'Resume';
+    
+    showToast('⏳', 'Generating PDF', 'Please wait...');
+    
+    const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `${name.replace(/\s+/g, '_')}_Resume.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+        showToast('✅', 'PDF Downloaded', 'Your resume has been saved!');
+    });
+}
+
+function downloadImage() {
+    const element = document.getElementById('resumePreview');
+    const name = document.getElementById('fullName').value || 'Resume';
+    
+    showToast('⏳', 'Generating Image', 'Please wait...');
+    
+    html2canvas(element, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${name.replace(/\s+/g, '_')}_Resume.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅', 'Image Downloaded', 'Your resume image has been saved!');
+    });
+}
+
+// Referral System
+function showReferralModal() {
+    document.getElementById('referralModal').classList.remove('hidden');
+    document.getElementById('referralModal').classList.add('flex');
+}
+
+function closeReferralModal() {
+    document.getElementById('referralModal').classList.add('hidden');
+    document.getElementById('referralModal').classList.remove('flex');
+}
+
+function copyReferralLink() {
+    const input = document.getElementById('referralLink');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        showToast('📋', 'Copied!', 'Referral link copied to clipboard');
+    });
+}
+
+function shareVia(platform) {
+    const link = document.getElementById('referralLink').value;
+    const text = 'Build your ATS-friendly resume for free with Smart ATS Builder!';
+    let url;
+    
+    switch (platform) {
+        case 'twitter':
+            url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
+            break;
+        case 'linkedin':
+            url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
+            break;
+        case 'whatsapp':
+            url = `https://wa.me/?text=${encodeURIComponent(text + ' ' + link)}`;
+            break;
+    }
+    
+    window.open(url, '_blank', 'width=600,height=400');
+    
+    // Simulate earning a credit
+    referralCredits++;
+    document.getElementById('totalCredits').textContent = referralCredits;
+    showToast('🎁', 'Shared!', 'Thanks for sharing! +1 credit earned');
+}
+
+function shareResume() {
+    showReferralModal();
+}
+
+// Toast
+function showToast(icon, title, msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastIcon').textContent = icon;
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.remove('hidden');
+    toast.classList.add('slide-up');
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    showSection('landing');
+});
+</script>
+</body>
+</html>
