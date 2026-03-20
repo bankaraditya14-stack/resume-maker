@@ -1,0 +1,5 @@
+# IDE / editor settings
+.vscode/
+
+# Temporary scaffolding (never commit)
+resume-maker-website/tmp-inline-scripts.js
