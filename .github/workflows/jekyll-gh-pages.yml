@@ -33,7 +33,9 @@ jobs:
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./
+          # Your actual site files (index.html, assets, etc.) live here.
+          # Point the build at this folder so GitHub Pages serves the resume builder.
+          source: ./resume-maker-website
           destination: ./_site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
